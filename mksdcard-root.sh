@@ -1,6 +1,9 @@
 #!/bin/bash
 
 ROOTDEV=$1
+TOP=$(pwd)
+RESULT_DIR=${TOP}/result
+MOUNT_DIR=${RESULT_DIR}/mnt
 
 function cleanup_sd {
 	echo ""
@@ -49,28 +52,50 @@ END
 
 function make_boot()
 {
-    mkdir -p mnt
-    sudo mount -t vfat ${ROOTDEV}"1" mnt
-    sudo cp boot/* mnt
+    mkdir -p ${MOUNT_DIR}
+    echo "result dir ---> ${RESULT_DIR}"
+    sudo mount -t vfat ${ROOTDEV}"1" ${MOUNT_DIR}
+    sudo cp ${RESULT_DIR}/boot/* ${MOUNT_DIR}/
     sync
-    sudo umount mnt
+    sudo umount ${MOUNT_DIR}
+}
+
+function patch_root()
+{
+    cd ${TOP}
+    local patch_dir=${TOP}/tools/patch
+    local patch_list_file=${patch_dir}/files.txt
+    local src_file=""
+    local dst_dir=""
+    while read line; do
+        src_file=$(echo ${line} | awk '{print $1}')
+        dst_dir=$(echo ${line} | awk '{print $2}')
+        echo "copy ${patch_dir}/${src_file}  =====> ${MOUNT_DIR}/${dst_dir}"
+        cp ${patch_dir}/${src_file} ${MOUNT_DIR}/${dst_dir}
+    done < ${patch_list_file}
+    cd ${TOP}
 }
 
 function make_root()
 {
-    mkdir -p mnt
-    sudo mount -t ext4 ${ROOTDEV}"2" mnt
-    sudo cp -a binary/* mnt
-    sudo chown -R 1000:1000 mnt/*
+    mkdir -p ${MOUNT_DIR}
+    sudo mount -t ext4 ${ROOTDEV}"2" ${MOUNT_DIR}
+    sudo chown -R 1000:1000 ${MOUNT_DIR}
+    tar xvzf ${RESULT_DIR}/*.gz -C ${RESULT_DIR}/
+    cp -a ${RESULT_DIR}/binary/* ${MOUNT_DIR}
+
+    patch_root
+
     sync
-    sudo umount mnt
+    sudo umount ${MOUNT_DIR}
 }
 
 if [ $ROOTDEV ]
 then
     cleanup_sd
-    rm -rf mnt/*
+    rm -rf ${MOUNT_DIR}/*
 	format_sd
+    sleep 1
     make_boot
     make_root
 else

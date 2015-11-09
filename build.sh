@@ -183,6 +183,18 @@ function build_kernel()
     fi
 }
 
+function get_ubuntu_build_dir()
+{
+    local build_dir=
+    if [ "${ARCH}" == "arm64" ]; then
+        build_dir=vivid-arm64-gnome
+    else
+        build_dir=vivid-armhf-gnome
+    fi
+    local ubuntu_build_dir=${TOP}/ubuntu-build-service/${build_dir}
+    echo -n ${ubuntu_build_dir}
+}
+
 function build_ubuntu()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_UBUNTU} == "true" ]; then
@@ -191,14 +203,15 @@ function build_ubuntu()
         echo "build ubuntu"
         echo "=============================================="
 
-        local build_dir=
-        if [ "${ARCH}" == "arm64" ]; then
-            build_dir=vivid-arm64-gnome
-        else
-            build_dir=vivid-armhf-gnome
-        fi
-        UBUNTU_BUILD_DIR=${TOP}/ubuntu-build-service/${build_dir}
-        cd ${UBUNTU_BUILD_DIR}
+        # local build_dir=
+        # if [ "${ARCH}" == "arm64" ]; then
+        #     build_dir=vivid-arm64-gnome
+        # else
+        #     build_dir=vivid-armhf-gnome
+        # fi
+        # UBUNTU_BUILD_DIR=${TOP}/ubuntu-build-service/${build_dir}
+        # cd ${UBUNTU_BUILD_DIR}
+        cd $(get_ubuntu_build_dir)
         ./configure
         make
 
@@ -227,9 +240,11 @@ function make_boot()
 
 function make_root()
 {
-    mkdir -p ${RESULT_DIR}/root
-    cp -a ${UBUNTU_BUILD_DIR}/binary/* ${RESULT_DIR}/root
-    sudo chown -R 1000:1000 ${RESULT_DIR}/root/*
+    # mkdir -p ${RESULT_DIR}/root
+    # sudo cp -a $(get_ubuntu_build_dir)/binary/* ${RESULT_DIR}/root
+    # sudo chown -R 1000:1000 ${RESULT_DIR}/root/*
+
+    cp $(get_ubuntu_build_dir)/*.gz ${RESULT_DIR}
 }
 
 function post_process()
@@ -258,4 +273,4 @@ setup_toolchain
 build_uboot
 build_kernel
 build_ubuntu
-# post_process
+post_process
